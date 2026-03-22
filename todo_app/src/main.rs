@@ -1,12 +1,15 @@
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast; 
+
 use eframe::egui;
+// This tells the whole file to use web-time's Instant instead of the broken standard one
+use web_time::Instant; 
 
 //Data
 struct PomodoroApp {
     seconds_left: u32,
     is_running: bool,
-    last_tick: std::time::Instant,
+    last_tick: Instant, // Using the web-friendly Instant
 }
 
 //logic
@@ -16,7 +19,7 @@ impl PomodoroApp {
             // Starting values
             seconds_left: 1500, // change this for testing
             is_running: false,
-            last_tick: std::time::Instant::now(),
+            last_tick: Instant::now(),
         }
     }
 }
@@ -70,7 +73,7 @@ impl eframe::App for PomodoroApp {
                 if ui.add(egui::Button::new(button_text).min_size(egui::vec2(120.0, 40.0))).clicked() {
                     self.is_running = !self.is_running;
                     if self.is_running {
-                        self.last_tick = std::time::Instant::now();
+                        self.last_tick = Instant::now();
                     }
                 }
 
@@ -88,7 +91,7 @@ impl eframe::App for PomodoroApp {
                     // This is the "Real Time" check
                     if self.last_tick.elapsed().as_secs() >= 1 {
                         self.seconds_left -= 1; //minus 1 second
-                        self.last_tick = std::time::Instant::now(); // reset the marker
+                        self.last_tick = Instant::now(); // reset the marker
                     }
                     
                     // This line is CRITICAL. It tells the app: 
@@ -113,7 +116,6 @@ fn main() -> eframe::Result {
     )
 }
 
-// to run in the browser (this was done by AI)
 // This part runs in the Web Browser (WASM)
 #[cfg(target_arch = "wasm32")]
 fn main() {

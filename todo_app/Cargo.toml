@@ -6,8 +6,9 @@ edition = "2021"
 [dependencies]
 eframe = "0.33.3"
 log = "0.4"
+# ADD THIS LINE HERE:
+web-time = "1.1" 
 
-# These only download for the WASM build
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4"
 wasm-bindgen = "0.2"
