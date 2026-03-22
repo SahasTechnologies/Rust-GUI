@@ -10,6 +10,9 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true 
+
 jobs:
   build-native:
     name: Build Native (${{ matrix.os }})
@@ -28,7 +31,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: todo_app # THIS TELLS GITHUB TO GO INTO YOUR FOLDER
+        working-directory: todo_app
 
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +42,7 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: todo_app # Crucial for subfolders!
+          workspaces: todo_app
 
       - name: Install Linux Dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -53,18 +56,18 @@ jobs:
       - name: Prepare Artifact
         shell: bash
         run: |
-          mkdir ../artifact
+          mkdir -p ./out
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            cp target/release/pomodoro_app.exe ../artifact/${{ matrix.artifact_name }}
+            cp target/release/pomodoro_app.exe ./out/${{ matrix.artifact_name }}
           else
-            cp target/release/pomodoro_app ../artifact/${{ matrix.artifact_name }}
+            cp target/release/pomodoro_app ./out/${{ matrix.artifact_name }}
           fi
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
-          path: artifact/${{ matrix.artifact_name }}
+          path: todo_app/out/${{ matrix.artifact_name }}
 
   build-wasm:
     name: Build WASM (GitHub Pages)
@@ -79,11 +82,6 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: todo_app
 
       - name: Install Trunk
         run: cargo install trunk --locked
