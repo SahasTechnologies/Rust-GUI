@@ -15,7 +15,7 @@ jobs:
     name: Build Native (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false # Don't cancel Windows if Mac fails!
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         include:
@@ -26,6 +26,10 @@ jobs:
           - os: macos-latest
             artifact_name: pomodoro-macos
 
+    defaults:
+      run:
+        working-directory: todo_app # THIS TELLS GITHUB TO GO INTO YOUR FOLDER
+
     steps:
       - uses: actions/checkout@v4
 
@@ -33,7 +37,9 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Rust Cache
-        uses: Swatinem/rust-cache@v2 # Speeds up builds by 5-10 mins
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: todo_app # Crucial for subfolders!
 
       - name: Install Linux Dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -47,12 +53,11 @@ jobs:
       - name: Prepare Artifact
         shell: bash
         run: |
-          mkdir artifact
-          # Note: Changed from pomodoro-app to pomodoro_app to match your Cargo.toml
+          mkdir ../artifact
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            cp target/release/pomodoro_app.exe artifact/${{ matrix.artifact_name }}
+            cp target/release/pomodoro_app.exe ../artifact/${{ matrix.artifact_name }}
           else
-            cp target/release/pomodoro_app artifact/${{ matrix.artifact_name }}
+            cp target/release/pomodoro_app ../artifact/${{ matrix.artifact_name }}
           fi
 
       - name: Upload Artifact
@@ -64,6 +69,9 @@ jobs:
   build-wasm:
     name: Build WASM (GitHub Pages)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: todo_app
     steps:
       - uses: actions/checkout@v4
 
@@ -74,6 +82,8 @@ jobs:
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: todo_app
 
       - name: Install Trunk
         run: cargo install trunk --locked
@@ -85,7 +95,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wasm-site
-          path: dist
+          path: todo_app/dist
 
   release:
     name: Publish GitHub Release
@@ -101,7 +111,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: artifacts/**/*
-          generate_release_notes: true # Auto-lists your commits!
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
