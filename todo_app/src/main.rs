@@ -1,107 +1,108 @@
-use eframe::egui;
+use eframe::egui; // Fixed: lowercase 'u'
 
-struct Todo {
-    text: String,
-    done: bool,
+//Data
+struct PomodoroApp {
+    seconds_left: u32,
+    is_running: bool,
+    last_tick: std::time::Instant,
 }
 
-struct TodoApp {
-    todos: Vec<Todo>,
-    new_todo_text: String,
-}
-
-impl TodoApp {
+//logic
+impl PomodoroApp {
     fn new(_cc: &eframe::CreationContext<'_>) -> Self {
         Self {
-            todos: Vec::new(),
-            new_todo_text: String::new(),
+            // Starting values
+            seconds_left: 1500, // change this for testing
+            is_running: false,
+            last_tick: std::time::Instant::now(),
         }
     }
 }
 
-impl eframe::App for TodoApp {
+//drawing
+impl eframe::App for PomodoroApp {
+    //boilerplate
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("My To-Do List");
+            
+            // This container makes everything big and centered!
+            ui.vertical_centered(|ui| {
+                ui.add_space(30.0); // Padding at the top
+                ui.heading("Pomodoro Timer");//Heading
+                //AAAA there are semicolons sometimes and commas sometimes and AAAA
+                //this is why i love like python theres none of this
 
-            ui.add_space(10.0);
+                //setting variables
+                // (ik it sounds dumb im adding these comments)
+                // pls bear with me i love comments too much
+                let mins = self.seconds_left / 60;
+                let secs = self.seconds_left % 60; //modulo
 
-            // Textbox
-            ui.horizontal(|ui| {
-                // Text
-                let text_input = ui.text_edit_singleline(&mut self.new_todo_text);
+                // Print this in the UI!
+                let time_text = format!("{}:{:02}", mins, secs);
+                
+                let mut big_time = egui::RichText::new(time_text).size(80.0).monospace();
 
-                // Add button
-                if (ui.button("Add").clicked()
-                    || (text_input.lost_focus()
-                        && ui.input(|i| i.key_pressed(egui::Key::Enter))))
-                    && !self.new_todo_text.is_empty()
-                {
-                    // new todo
-                    self.todos.push(Todo {
-                        text: self.new_todo_text.clone(),
-                        done: false,
-                    });
-                    // clear the input field
-                    self.new_todo_text.clear();
-                    text_input.request_focus();
+                // Make the timer green on 0min!
+                if self.seconds_left == 0 {
+                    big_time = big_time.color(egui::Color32::GREEN);
+                }
+                
+                // actually draw the time
+                ui.label(big_time);
+
+                ui.add_space(20.0);
+
+                if self.seconds_left == 0 {
+                    // Uppercase GREEN
+                    ui.label(egui::RichText::new("Take a break!").size(30.0).color(egui::Color32::GREEN));
+                }
+
+                //Button
+                let button_text = if self.is_running {
+                    "Stop"
+                } else {
+                    "Start"
+                };
+
+                if ui.add(egui::Button::new(button_text).min_size(egui::vec2(120.0, 40.0))).clicked() {
+                    self.is_running = !self.is_running;
+                    if self.is_running {
+                        self.last_tick = std::time::Instant::now();
+                    }
+                }
+
+                ui.add_space(10.0);
+
+                //reset button
+                if ui.button("Reset").clicked() {
+                    self.is_running = false;
+                    self.seconds_left = 1500; //set time back to 25min
+                }
+
+                // Countdown Logic
+                if self.is_running && self.seconds_left > 0 { //if there is tiem left
+                    
+                    // This is the "Real Time" check
+                    if self.last_tick.elapsed().as_secs() >= 1 {
+                        self.seconds_left -= 1; //minus 1 second
+                        self.last_tick = std::time::Instant::now(); // reset the marker
+                    }
+                    
+                    // This line is CRITICAL. It tells the app: 
+                    // "Even if the user doesn't move the mouse, run this loop again ASAP!"
+                    ctx.request_repaint(); 
                 }
             });
-
-            //padding
-            ui.add_space(10.0);
-            ui.separator();
-            ui.add_space(5.0);
-
-            // label
-            let total = self.todos.len();
-            let done_count = self.todos.iter().filter(|t| t.done).count();
-            ui.label(format!("{done_count} of {total} tasks completed"));
-
-            ui.add_space(5.0);
-
-            let mut to_remove: Option<usize> = None;
-
-            for (i, todo) in self.todos.iter_mut().enumerate() {
-                ui.horizontal(|ui| {
-                
-                    ui.checkbox(&mut todo.done, "");
-
-                    if todo.done {
-                        ui.label(
-                            egui::RichText::new(&todo.text).strikethrough(),
-                        );
-                    } else {
-                        ui.label(&todo.text);
-                    }
-
-                    if ui.button("X").clicked() {
-                        to_remove = Some(i);
-                    }
-                });
-            }
-
-            if let Some(index) = to_remove {
-                self.todos.remove(index);
-            }
-
-
-            if self.todos.iter().any(|t| t.done) {
-                ui.add_space(10.0);
-                if ui.button("Clear completed").clicked() {
-                    self.todos.retain(|t| !t.done);
-                }
-            }
         });
     }
 }
 
-
 fn main() -> eframe::Result {
     let native_options = eframe::NativeOptions::default();
     eframe::run_native(
-        "To-Do List",
+        "Pomodoro Timer",
         native_options,
-        Box::new(|cc| Ok(Box::new(TodoApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(PomodoroApp::new(cc)))),
     )
 }
