@@ -1,4 +1,6 @@
-use eframe::egui; // Fixed: lowercase 'u'
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::JsCast; 
+use eframe::egui;
 
 //Data
 struct PomodoroApp {
@@ -112,16 +114,26 @@ fn main() -> eframe::Result {
 }
 
 // to run in the browser (this was done by AI)
+// This part runs in the Web Browser (WASM)
 #[cfg(target_arch = "wasm32")]
 fn main() {
+    // Redirect console errors to the browser dev tools
     eframe::WebLogger::init(log::LevelFilter::Debug).ok();
 
     let web_options = eframe::WebOptions::default();
 
     wasm_bindgen_futures::spawn_local(async {
+        // We find the canvas element in your index.html
+        let document = web_sys::window().unwrap().document().unwrap();
+        let canvas = document
+            .get_element_by_id("the_canvas_id")
+            .unwrap()
+            .dyn_into::<web_sys::HtmlCanvasElement>()
+            .unwrap();
+
         eframe::WebRunner::new()
             .start(
-                "the_canvas_id", 
+                canvas, // Now passing the actual canvas element!
                 web_options,
                 Box::new(|cc| Ok(Box::new(PomodoroApp::new(cc)))),
             )
